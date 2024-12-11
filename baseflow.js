@@ -1,21 +1,6 @@
 (() => {
-  let supabase = null;
   let currentUser = null;
   let notificationParent = null;
-
-  /**
-   * Initialization function to be called externally:
-   * initializeSupabase({ supabaseUrl, supabaseKey })
-   * Must be called before DOMContentLoaded or at least before any supabase dependent code runs.
-   */
-  window.initializeSupabase = ({ supabaseUrl, supabaseKey }) => {
-    if (!supabaseUrl || !supabaseKey) {
-      console.error("Supabase URL and Key must be provided.");
-      return;
-    }
-    supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-    console.log("Supabase initialized:", supabase);
-  };
 
   /**
    * Locate the notification parent container
@@ -65,7 +50,10 @@
   };
 
   const fetchCurrentUser = async () => {
-    if (!supabase) return null;
+    if (typeof supabase === 'undefined') {
+      console.error("Supabase is not defined. Make sure to initialize it before loading this script.");
+      return null;
+    }
     const { data: { user } } = await supabase.auth.getUser();
     currentUser = user;
     return user;
@@ -85,8 +73,6 @@
       hasAccess = !!currentUser;
     } else if (requiredAccess === "unauthenticated") {
       hasAccess = !currentUser;
-    } else {
-      // Add custom logic for roles/premium if desired
     }
 
     if (!hasAccess && redirectUrl) {
@@ -103,7 +89,6 @@
       let shouldHide = false;
       if (visibility === "authenticated") shouldHide = !currentUser;
       if (visibility === "unauthenticated") shouldHide = !!currentUser;
-      // For role-based visibility, similar logic could be added.
 
       const finalHide = hideIf ? shouldHide : !shouldHide;
       el.style.display = finalHide ? "none" : "";
@@ -167,7 +152,7 @@
           trigger.removeAttribute("bflow-sb-confirm");
           trigger.removeAttribute("bflow-sb-confirm-target");
           trigger.click();
-          // Re-add attributes (in case needed again)
+          // Re-add attributes
           trigger.setAttribute("bflow-sb-confirm", confirmMsg);
           trigger.setAttribute("bflow-sb-confirm-target", target);
         };
@@ -382,8 +367,10 @@
   };
 
   document.addEventListener("DOMContentLoaded", async () => {
-    // We assume initializeSupabase has been called before this event
-    // so supabase should be defined by now.
+    if (typeof supabase === 'undefined') {
+      console.error("Supabase is not defined. Make sure to initialize it before loading this script.");
+      return;
+    }
     await fetchCurrentUser();
     await checkPageAccess();
     await handleVisibility();
