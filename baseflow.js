@@ -1,1 +1,455 @@
-(()=>{let c,d=null;window.initializeSupabase=({supabaseUrl:e,supabaseKey:t})=>{e&&t?c=Supabase.createClient(e,t):console.error("Supabase URL and Key must be provided.")};const p=(e,t="success")=>{const n=document.querySelector(".bflow-feedback");n&&n.remove();const s=document.createElement("div");s.innerText=e,s.className=`bflow-feedback ${t}`,Object.assign(s.style,{position:"fixed",bottom:"10px",right:"10px",background:"success"===t?"green":"red",color:"white",padding:"10px",borderRadius:"5px",zIndex:9999,fontFamily:"sans-serif"}),document.body.appendChild(s),setTimeout(()=>s.remove(),3e3)},r=async()=>{if(!c)return null;const{data:{user:e}}=await c.auth.getUser();return d=e,e},u=async()=>{const e=document.querySelector("body");if(!e)return;const t=e.getAttribute("bflow-sb-page-access"),n=e.getAttribute("bflow-sb-page-redirect");if(!t)return;await r();let s=!1;"authenticated"===t?s=!!d:"unauthenticated"===t?s=!d:d&&d.role===t?s=!0:"premium"===t&&(s=d&&d.user_metadata&&d.user_metadata.premium),!s&&n&&(window.location.href=n)},h=async()=>{const e=document.querySelectorAll("[bflow-sb-visibility]");await r(),e.forEach(l=>{const f=l.getAttribute("bflow-sb-visibility"),g="true"===l.getAttribute("bflow-sb-visibility-hide-if");let v=!1;"authenticated"===f?v=!d:"unauthenticated"===f?v=!!d:v=!(d&&d.role===f);const m=g?v:!v;l.style.display=m?"none":""})},y=async()=>{const e=document.querySelectorAll("[bflow-sb-role]");await r(),e.forEach(l=>{const f=l.getAttribute("bflow-sb-role"),g="true"===l.getAttribute("bflow-sb-role-hide-if"),v=d&&d.role===f;let m=!1;g&&v&&(m=!0),!g&&!v&&(m=!0),l.style.display=m?"none":""})},E=()=>{const e=document.querySelectorAll("[bflow-sb-error]");e.forEach(t=>{const n="show"===t.getAttribute("bflow-sb-error"),s=t.getAttribute("bflow-sb-error-message")||"An error occurred.";n?(t.innerText=s,t.style.display="block"):t.style.display="none"})},b=async()=>{const e=document.querySelectorAll("[bflow-sb-content='dynamic']");await r();for(const t of e){const n=t.getAttribute("bflow-sb-content-table"),s=t.getAttribute("bflow-sb-content-field");if(!n||!s)continue;try{const{data:l,error:f}=await c.from(n).select(s);if(f)throw f;l&&l.length>0&&(t.innerText=l.map(m=>m[s]).join(", "))}catch(l){console.error("Error fetching dynamic content:",l),p("Error loading content","error")}}},w=()=>{document.addEventListener("click",e=>{const t=e.target.closest("[bflow-sb-track]");if(t){const n=t.getAttribute("bflow-sb-track");console.log(`Event Tracked: ${n}`)}})},S=()=>{document.addEventListener("click",e=>{const t=e.target.closest("[bflow-sb-confirm]");if(t){e.preventDefault();const n=t.getAttribute("bflow-sb-confirm-target"),s=document.getElementById(n);if(!s){console.error("Modal not found:",n);return}s.style.display="block";const l=s.querySelector("[bflow-sb-confirm-button='true']"),f=s.querySelector("[bflow-sb-cancel-button='true']"),g=()=>{s.style.display="none";const v=t.getAttribute("bflow-sb-confirm"),m=t.getAttribute("bflow-sb-confirm-target");t.removeAttribute("bflow-sb-confirm"),t.removeAttribute("bflow-sb-confirm-target"),t.click(),t.setAttribute("bflow-sb-confirm",v),t.setAttribute("bflow-sb-confirm-target",m)};l&&(l.onclick=g),f&&(f.onclick=()=>{s.style.display="none"})}})},A=(e,t)=>{if(!e)return;const n=e.getAttribute("bflow-sb-loading");"true"===n&&(e.disabled=t,e.style.opacity=t?"0.5":"1")},C=e=>{e&&(document.querySelectorAll("[bflow-sb-refresh-on-success='true']").length>0&&window.location.reload())},L=()=>{document.addEventListener("submit",async e=>{const t=e.target.closest("[bflow-sb-form]");if(!t)return;e.preventDefault(),A(t,!0);const n=t.getAttribute("bflow-sb-form");let s,l,f,g={};const v=t.querySelectorAll("[bflow-sb-input]");v.forEach(o=>{const i=o.getAttribute("bflow-sb-input"),a=o.getAttribute("bflow-sb-input-field")||i;g[a]=o.value});let m=!1;try{if("auth"===n){s=t.getAttribute("bflow-sb-auth");const o=t.getAttribute("bflow-sb-auth-redirect");let i;if("login"===s)i=await c.auth.signInWithPassword({email:g.email,password:g.password});else if("signup"===s){i=await c.auth.signUp({email:g.email,password:g.password,...g.name?{data:{name:g.name}}:{}})}else"logout"===s?i=await c.auth.signOut():"check"===s?i=await c.auth.getUser():"reset-password"===s&&(i=await c.auth.resetPasswordForEmail(g.email));i&&!i.error?(m=!0,p(`Auth ${s} successful`,"success"),o&&(window.location.href=o)):i&&i.error&&p(`Error: ${i.error.message}`,"error"),await r()}else if("crud"===n){s=t.getAttribute("bflow-sb-crud"),l=t.getAttribute("bflow-sb-crud-table"),f=t.getAttribute("bflow-sb-crud-id");const o=t.getAttribute("bflow-sb-crud-payload");if(o)try{const i=JSON.parse(o);g={...g,...i}}catch(i){console.error("Invalid JSON in bflow-sb-crud-payload:",i)}let i;if("create"===s)i=await c.from(l).insert(g);else if("read"===s)i=await c.from(l).select();else if("update"===s){if(!f){console.error("No ID provided for update operation."),p("No ID provided for update.","error")}else i=await c.from(l).update(g).eq("id",f)}else if("delete"===s){if(!f){console.error("No ID provided for delete operation."),p("No ID provided for delete.","error")}else i=await c.from(l).delete().eq("id",f)}i&&!i.error?(m=!0,p(`CRUD ${s} successful`,"success")):i&&i.error&&p(`Error: ${i.error.message}`,"error")}C(m)}catch(o){console.error("Error:",o),p(`Error: ${o.message}`,"error")}finally{A(t,!1)}})},R=()=>{document.addEventListener("click",async e=>{const t=e.target.closest("[bflow-sb-crud],[bflow-sb-auth],[bflow-sb-confirm]");if(!t||t.hasAttribute("bflow-sb-form"))return;if(t.hasAttribute("bflow-sb-confirm"))return;A(t,!0);let n=!1;try{if(t.hasAttribute("bflow-sb-auth")){const s=t.getAttribute("bflow-sb-auth"),l=t.getAttribute("bflow-sb-auth-email"),f=t.getAttribute("bflow-sb-auth-password"),g=t.getAttribute("bflow-sb-auth-redirect");let v;if("login"===s)v=await c.auth.signInWithPassword({email:l,password:f});else if("signup"===s)v=await c.auth.signUp({email:l,password:f});else"logout"===s?v=await c.auth.signOut():"check"===s?v=await c.auth.getUser():"reset-password"===s&&(v=await c.auth.resetPasswordForEmail(l));v&&!v.error?(p(`Auth ${s} successful`,"success"),n=!0,g&&(window.location.href=g)):v&&v.error&&p(`Error: ${v.error.message}`,"error"),await r()}if(t.hasAttribute("bflow-sb-crud")){const s=t.getAttribute("bflow-sb-crud"),l=t.getAttribute("bflow-sb-crud-table"),f=t.getAttribute("bflow-sb-crud-id"),g=t.getAttribute("bflow-sb-crud-payload");let v={};if(g)try{v=JSON.parse(g)}catch(i){console.error("Invalid JSON in bflow-sb-crud-payload:",i)}let m;if("create"===s)m=await c.from(l).insert(v);else if("read"===s)m=await c.from(l).select();else if("update"===s){if(!f)p("No ID provided for update.","error");else m=await c.from(l).update(v).eq("id",f)}else if("delete"===s){if(!f)p("No ID provided for delete.","error");else m=await c.from(l).delete().eq("id",f)}m&&!m.error?(p(`CRUD ${s} successful`,"success"),n=!0):m&&m.error&&p(`Error: ${m.error.message}`,"error")}C(n)}catch(s){console.error("Error:",s),p(`Error: ${s.message}`,"error")}finally{A(t,!1)}})},D=async()=>{await r(),await u(),await h(),await y(),E(),await b(),w(),S(),L(),R()};document.addEventListener("DOMContentLoaded",D);})();
+(() => {
+  let supabase;
+  let currentUser = null;
+
+  // Allow configuration from outside
+  window.initializeSupabase = ({ supabaseUrl, supabaseKey }) => {
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("Supabase URL and Key must be provided.");
+      return;
+    }
+    const { createClient } = window;
+    supabase = createClient(supabaseUrl, supabaseKey);
+  };
+
+  /**
+   * Helper Functions
+   */
+
+  // Show feedback (error/success) message
+  const showFeedback = (message, type = "success") => {
+    const existing = document.querySelector(".bflow-feedback");
+    if (existing) existing.remove();
+
+    const feedback = document.createElement("div");
+    feedback.innerText = message;
+    feedback.className = `bflow-feedback ${type}`;
+    Object.assign(feedback.style, {
+      position: "fixed",
+      bottom: "10px",
+      right: "10px",
+      background: type === "success" ? "green" : "red",
+      color: "white",
+      padding: "10px",
+      borderRadius: "5px",
+      zIndex: 9999,
+      fontFamily: "sans-serif"
+    });
+    document.body.appendChild(feedback);
+
+    setTimeout(() => feedback.remove(), 3000);
+  };
+
+  // Get current user from Supabase
+  const fetchCurrentUser = async () => {
+    if (!supabase) return null;
+    const { data: { user } } = await supabase.auth.getUser();
+    currentUser = user;
+    return user;
+  };
+
+  // Check page access and redirect if needed
+  const checkPageAccess = async () => {
+    const body = document.querySelector("body");
+    if (!body) return;
+
+    const requiredAccess = body.getAttribute("bflow-sb-page-access");
+    const redirectUrl = body.getAttribute("bflow-sb-page-redirect");
+
+    if (!requiredAccess) return;
+
+    await fetchCurrentUser();
+
+    let hasAccess = false;
+
+    if (requiredAccess === "authenticated") {
+      hasAccess = !!currentUser;
+    } else if (requiredAccess === "unauthenticated") {
+      hasAccess = !currentUser;
+    } else {
+      // Could be a role or premium
+      if (currentUser && currentUser.role === requiredAccess) {
+        hasAccess = true;
+      } else if (requiredAccess === "premium") {
+        // Custom logic if you have a premium flag in user metadata
+        hasAccess = currentUser && currentUser.user_metadata && currentUser.user_metadata.premium;
+      }
+    }
+
+    if (!hasAccess && redirectUrl) {
+      window.location.href = redirectUrl;
+    }
+  };
+
+  // Handle Visibility (authenticated/unauthenticated/role)
+  const handleVisibility = async () => {
+    const elements = document.querySelectorAll("[bflow-sb-visibility]");
+    await fetchCurrentUser();
+
+    elements.forEach(el => {
+      const visibility = el.getAttribute("bflow-sb-visibility");
+      const hideIf = el.getAttribute("bflow-sb-visibility-hide-if") === "true";
+      let shouldHide = false;
+
+      if (visibility === "authenticated") {
+        shouldHide = !currentUser;
+      } else if (visibility === "unauthenticated") {
+        shouldHide = !!currentUser;
+      } else {
+        // role-based visibility
+        shouldHide = !(currentUser && currentUser.role === visibility);
+      }
+
+      const finalHide = hideIf ? shouldHide : !shouldHide;
+      el.style.display = finalHide ? "none" : "";
+    });
+  };
+
+  // Handle Roles on elements
+  const handleRoles = async () => {
+    const elements = document.querySelectorAll("[bflow-sb-role]");
+    await fetchCurrentUser();
+
+    elements.forEach(el => {
+      const roleRequired = el.getAttribute("bflow-sb-role");
+      const hideIf = el.getAttribute("bflow-sb-role-hide-if") === "true";
+
+      const userHasRole = currentUser && currentUser.role === roleRequired;
+      let shouldHide = false;
+      if (hideIf && userHasRole) shouldHide = true;
+      if (!hideIf && !userHasRole) shouldHide = true;
+
+      el.style.display = shouldHide ? "none" : "";
+    });
+  };
+
+  // Handle Error display
+  const handleErrors = () => {
+    const elements = document.querySelectorAll("[bflow-sb-error]");
+    elements.forEach(el => {
+      const showError = el.getAttribute("bflow-sb-error") === "show";
+      const errorMsg = el.getAttribute("bflow-sb-error-message") || "An error occurred.";
+      if (showError) {
+        el.innerText = errorMsg;
+        el.style.display = "block";
+      } else {
+        el.style.display = "none";
+      }
+    });
+  };
+
+  // Handle Dynamic Content Rendering
+  const handleDynamicContent = async () => {
+    const elements = document.querySelectorAll("[bflow-sb-content='dynamic']");
+    await fetchCurrentUser();
+    for (const el of elements) {
+      const table = el.getAttribute("bflow-sb-content-table");
+      const field = el.getAttribute("bflow-sb-content-field");
+      if (!table || !field) continue;
+      try {
+        const { data, error } = await supabase.from(table).select(field);
+        if (error) throw error;
+        if (data && data.length > 0) {
+          el.innerText = data.map(d => d[field]).join(", ");
+        }
+      } catch (err) {
+        console.error("Error fetching dynamic content:", err);
+        showFeedback("Error loading content", "error");
+      }
+    }
+  };
+
+  // Handle Event Tracking
+  const handleEventTracking = () => {
+    document.addEventListener("click", (event) => {
+      const tracker = event.target.closest("[bflow-sb-track]");
+      if (tracker) {
+        const eventName = tracker.getAttribute("bflow-sb-track");
+        console.log(`Event Tracked: ${eventName}`);
+        // You could send this event to your analytics service
+      }
+    });
+  };
+
+  // Handle Confirmation Modals
+  const handleConfirmation = () => {
+    document.addEventListener("click", (event) => {
+      const trigger = event.target.closest("[bflow-sb-confirm]");
+      if (trigger) {
+        event.preventDefault();
+        const modalId = trigger.getAttribute("bflow-sb-confirm-target");
+        const modal = document.getElementById(modalId);
+        if (!modal) {
+          console.error("Modal not found:", modalId);
+          return;
+        }
+
+        // Show the modal
+        modal.style.display = "block";
+
+        const confirmButton = modal.querySelector("[bflow-sb-confirm-button='true']");
+        const cancelButton = modal.querySelector("[bflow-sb-cancel-button='true']");
+
+        const originalClick = () => {
+          modal.style.display = "none";
+          const confirmMsg = trigger.getAttribute("bflow-sb-confirm");
+          const target = trigger.getAttribute("bflow-sb-confirm-target");
+          trigger.removeAttribute("bflow-sb-confirm");
+          trigger.removeAttribute("bflow-sb-confirm-target");
+          trigger.click(); // Trigger original action
+          // Re-add attributes (in case needed again)
+          trigger.setAttribute("bflow-sb-confirm", confirmMsg);
+          trigger.setAttribute("bflow-sb-confirm-target", target);
+        };
+
+        if (confirmButton) {
+          confirmButton.onclick = originalClick;
+        }
+
+        if (cancelButton) {
+          cancelButton.onclick = () => {
+            modal.style.display = "none";
+          };
+        }
+      }
+    });
+  };
+
+  // Handle Loading and Refresh after operations
+  const setLoading = (element, loading) => {
+    if (!element) return;
+    const loadingAttr = element.getAttribute("bflow-sb-loading");
+    if (loadingAttr === "true") {
+      element.disabled = loading;
+      element.style.opacity = loading ? "0.5" : "1";
+    }
+  };
+
+  const handleRefreshOnSuccess = (success) => {
+    if (success) {
+      const refreshElements = document.querySelectorAll("[bflow-sb-refresh-on-success='true']");
+      if (refreshElements.length > 0) {
+        // Refresh the page
+        window.location.reload();
+      }
+    }
+  };
+
+  // Handle Authentication & CRUD via forms
+  const handleFormSubmission = () => {
+    document.addEventListener("submit", async (event) => {
+      const form = event.target.closest("[bflow-sb-form]");
+      if (!form) return;
+
+      event.preventDefault();
+      setLoading(form, true);
+
+      const formType = form.getAttribute("bflow-sb-form"); // auth or crud
+      let operation;
+      let table, id, payload = {};
+
+      // Collect inputs
+      const inputs = form.querySelectorAll("[bflow-sb-input]");
+      inputs.forEach((input) => {
+        const fieldType = input.getAttribute("bflow-sb-input");
+        const fieldName = input.getAttribute("bflow-sb-input-field") || fieldType;
+        payload[fieldName] = input.value;
+      });
+
+      let success = false;
+
+      try {
+        if (formType === "auth") {
+          operation = form.getAttribute("bflow-sb-auth");
+          const redirectUrl = form.getAttribute("bflow-sb-auth-redirect");
+          let response;
+          if (operation === "login") {
+            response = await supabase.auth.signInWithPassword({
+              email: payload.email,
+              password: payload.password,
+            });
+          } else if (operation === "signup") {
+            response = await supabase.auth.signUp({
+              email: payload.email,
+              password: payload.password,
+              ...(payload.name ? { data: { name: payload.name } } : {})
+            });
+          } else if (operation === "logout") {
+            response = await supabase.auth.signOut();
+          } else if (operation === "check") {
+            response = await supabase.auth.getUser();
+          } else if (operation === "reset-password") {
+            response = await supabase.auth.resetPasswordForEmail(payload.email);
+          }
+
+          if (!response?.error) {
+            success = true;
+            showFeedback(`Auth ${operation} successful`, "success");
+            if (redirectUrl) window.location.href = redirectUrl;
+          } else {
+            showFeedback(`Error: ${response.error.message}`, "error");
+          }
+
+          // Update currentUser
+          await fetchCurrentUser();
+
+        } else if (formType === "crud") {
+          operation = form.getAttribute("bflow-sb-crud");
+          table = form.getAttribute("bflow-sb-crud-table");
+          id = form.getAttribute("bflow-sb-crud-id");
+          // If a static payload is specified
+          const staticPayloadAttr = form.getAttribute("bflow-sb-crud-payload");
+          if (staticPayloadAttr) {
+            try {
+              const staticPayload = JSON.parse(staticPayloadAttr);
+              payload = { ...payload, ...staticPayload };
+            } catch (err) {
+              console.error("Invalid JSON in bflow-sb-crud-payload:", err);
+            }
+          }
+
+          let response;
+          if (operation === "create") {
+            response = await supabase.from(table).insert(payload);
+          } else if (operation === "read") {
+            response = await supabase.from(table).select();
+          } else if (operation === "update") {
+            if (!id) {
+              console.error("No ID provided for update operation.");
+              showFeedback("No ID provided for update.", "error");
+            } else {
+              response = await supabase.from(table).update(payload).eq("id", id);
+            }
+          } else if (operation === "delete") {
+            if (!id) {
+              console.error("No ID provided for delete operation.");
+              showFeedback("No ID provided for delete.", "error");
+            } else {
+              response = await supabase.from(table).delete().eq("id", id);
+            }
+          }
+
+          if (response && !response.error) {
+            success = true;
+            showFeedback(`CRUD ${operation} successful`, "success");
+          } else if (response && response.error) {
+            showFeedback(`Error: ${response.error.message}`, "error");
+          }
+        }
+
+        // Handle refresh on success
+        handleRefreshOnSuccess(success);
+
+      } catch (error) {
+        console.error("Error:", error);
+        showFeedback(`Error: ${error.message}`, "error");
+      } finally {
+        setLoading(form, false);
+      }
+    });
+  };
+
+  // Handle actions triggered by non-form elements (e.g. buttons)
+  const handleNonFormActions = () => {
+    document.addEventListener("click", async (event) => {
+      const el = event.target.closest("[bflow-sb-crud],[bflow-sb-auth],[bflow-sb-confirm]");
+      if (!el || el.hasAttribute("bflow-sb-form")) return; // Forms handled by submit event
+
+      // Confirmation is handled separately in the confirmation function, so skip if confirm attributes present
+      if (el.hasAttribute("bflow-sb-confirm")) return;
+
+      setLoading(el, true);
+      let success = false;
+
+      try {
+        // Auth actions
+        if (el.hasAttribute("bflow-sb-auth")) {
+          const operation = el.getAttribute("bflow-sb-auth");
+          const email = el.getAttribute("bflow-sb-auth-email");
+          const password = el.getAttribute("bflow-sb-auth-password");
+          const redirectUrl = el.getAttribute("bflow-sb-auth-redirect");
+
+          let response;
+          if (operation === "login") {
+            response = await supabase.auth.signInWithPassword({ email, password });
+          } else if (operation === "signup") {
+            response = await supabase.auth.signUp({ email, password });
+          } else if (operation === "logout") {
+            response = await supabase.auth.signOut();
+          } else if (operation === "check") {
+            response = await supabase.auth.getUser();
+          } else if (operation === "reset-password") {
+            response = await supabase.auth.resetPasswordForEmail(email);
+          }
+
+          if (response && !response.error) {
+            showFeedback(`Auth ${operation} successful`, "success");
+            success = true;
+            if (redirectUrl) window.location.href = redirectUrl;
+          } else if (response && response.error) {
+            showFeedback(`Error: ${response.error.message}`, "error");
+          }
+
+          await fetchCurrentUser();
+        }
+
+        // CRUD actions
+        if (el.hasAttribute("bflow-sb-crud")) {
+          const operation = el.getAttribute("bflow-sb-crud");
+          const table = el.getAttribute("bflow-sb-crud-table");
+          const id = el.getAttribute("bflow-sb-crud-id");
+          const payloadAttr = el.getAttribute("bflow-sb-crud-payload");
+          let payload = {};
+          if (payloadAttr) {
+            try {
+              payload = JSON.parse(payloadAttr);
+            } catch (err) {
+              console.error("Invalid JSON in bflow-sb-crud-payload:", err);
+            }
+          }
+
+          let response;
+          if (operation === "create") {
+            response = await supabase.from(table).insert(payload);
+          } else if (operation === "read") {
+            response = await supabase.from(table).select();
+          } else if (operation === "update") {
+            if (!id) showFeedback("No ID provided for update.", "error");
+            else response = await supabase.from(table).update(payload).eq("id", id);
+          } else if (operation === "delete") {
+            if (!id) showFeedback("No ID provided for delete.", "error");
+            else response = await supabase.from(table).delete().eq("id", id);
+          }
+
+          if (response && !response.error) {
+            showFeedback(`CRUD ${operation} successful`, "success");
+            success = true;
+          } else if (response && response.error) {
+            showFeedback(`Error: ${response.error.message}`, "error");
+          }
+        }
+
+        handleRefreshOnSuccess(success);
+
+      } catch (error) {
+        console.error("Error:", error);
+        showFeedback(`Error: ${error.message}`, "error");
+      } finally {
+        setLoading(el, false);
+      }
+    });
+  };
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    await fetchCurrentUser();
+    await checkPageAccess();
+    await handleVisibility();
+    await handleRoles();
+    handleErrors();
+    await handleDynamicContent();
+    handleEventTracking();
+    handleConfirmation();
+    handleFormSubmission();
+    handleNonFormActions();
+  });
+})();
