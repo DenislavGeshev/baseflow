@@ -24,7 +24,7 @@
       marginTop: "10px",
       borderRadius: "5px",
       fontFamily: "sans-serif",
-      transition: "all 0.3s ease"
+      transition: "all 0.3s ease",
     });
     if (type === "success") {
       notif.style.backgroundColor = "#dff0d8";
@@ -60,7 +60,7 @@
    * Fetch Current User
    */
   const fetchCurrentUser = async () => {
-    currentUser = auth.currentUser;
+    currentUser = window.auth.currentUser;
     return currentUser;
   };
 
@@ -94,7 +94,7 @@
   const handleVisibility = async () => {
     const elements = document.querySelectorAll("[bflow-fb-visibility]");
     await fetchCurrentUser();
-    elements.forEach(el => {
+    elements.forEach((el) => {
       const visibility = el.getAttribute("bflow-fb-visibility");
       const hideIf = el.getAttribute("bflow-fb-visibility-hide-if") === "true";
       let shouldHide = false;
@@ -118,8 +118,8 @@
       const field = el.getAttribute("bflow-fb-content-field");
       if (!collection || !field) continue;
       try {
-        const querySnapshot = await db.collection(collection).get();
-        const data = querySnapshot.docs.map(doc => doc.data()[field]).join(", ");
+        const querySnapshot = await window.db.collection(collection).get();
+        const data = querySnapshot.docs.map((doc) => doc.data()[field]).join(", ");
         el.innerText = data;
       } catch (err) {
         console.error("Error fetching dynamic content:", err);
@@ -134,16 +134,16 @@
   const handleAuthOperation = async (operation, payload) => {
     try {
       if (operation === "signup") {
-        await auth.createUserWithEmailAndPassword(payload.email, payload.password);
+        await window.auth.createUserWithEmailAndPassword(payload.email, payload.password);
         showNotification("Sign up successful! Please check your email.", "success");
       } else if (operation === "login") {
-        await auth.signInWithEmailAndPassword(payload.email, payload.password);
+        await window.auth.signInWithEmailAndPassword(payload.email, payload.password);
         showNotification("Login successful!", "success");
       } else if (operation === "logout") {
-        await auth.signOut();
+        await window.auth.signOut();
         showNotification("Logged out successfully!", "success");
       } else if (operation === "reset-password") {
-        await auth.sendPasswordResetEmail(payload.email);
+        await window.auth.sendPasswordResetEmail(payload.email);
         showNotification("Password reset email sent!", "success");
       }
       await fetchCurrentUser();
@@ -159,10 +159,10 @@
   const handleCrudOperation = async (operation, collection, id, payload) => {
     try {
       if (operation === "create") {
-        await db.collection(collection).add(payload);
+        await window.db.collection(collection).add(payload);
         showNotification("Document created successfully!", "success");
       } else if (operation === "read") {
-        const doc = await db.collection(collection).doc(id).get();
+        const doc = await window.db.collection(collection).doc(id).get();
         if (doc.exists) {
           console.log("Document data:", doc.data());
           showNotification("Document read successfully!", "success");
@@ -170,10 +170,10 @@
           showNotification("No such document!", "error");
         }
       } else if (operation === "update") {
-        await db.collection(collection).doc(id).update(payload);
+        await window.db.collection(collection).doc(id).update(payload);
         showNotification("Document updated successfully!", "success");
       } else if (operation === "delete") {
-        await db.collection(collection).doc(id).delete();
+        await window.db.collection(collection).doc(id).delete();
         showNotification("Document deleted successfully!", "success");
       }
     } catch (error) {
@@ -195,7 +195,7 @@
 
       const formType = form.getAttribute("bflow-fb-form");
       const payload = {};
-      form.querySelectorAll("[bflow-fb-input]").forEach(input => {
+      form.querySelectorAll("[bflow-fb-input]").forEach((input) => {
         const field = input.getAttribute("bflow-fb-input");
         payload[field] = input.value;
       });
